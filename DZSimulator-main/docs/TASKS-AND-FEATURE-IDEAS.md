@@ -1,0 +1,159 @@
+## TASK LIST FOR THE NEXT RELEASED VERSION:
+
+- [ ] Increase security with CSGO's netconport
+    - NOTE: Check out the [Source RCON Protocol](https://developer.valvesoftware.com/wiki/Source_RCON_Protocol) alternative first, supposedly slightly safer than netcon (psychonic: "RCon has some very limited brute force protection iirc"). Can it return client position values through `getpos`?
+    - However we choose to connect to CSGO, make sure that method also works for CS2
+    - Automatically disconnect from CSGO once CSGO joins an online (VAC-secured) server?
+    - Let user choose netconport value
+    - On first startup, randomly generate strong password (long and humanly readable, what's the max length?)
+    - Add option to generate a new password
+    - Can we detect what launch options are currently set in Steam for CSGO? Warn the user if not set correctly?
+    - Save chosen password and port in UserData.json
+    - Don't show password implicitly in DZSimulator UI
+    - Warn the user that this password must not be shared with others
+    - Send "PASS my-long-password" before any other communication
+    - Check for responses: "Bad password attempt from net console" or "This server is password protected for console access. Must send PASS command"
+- [ ] Add option "Don't show this message again" to message that pops up when DZSim update is available on GitHub
+
+- [ ] Give user a performance warning when loading dz_arctic or dz_csgoworld_*. (Maybe detect total prop triangle count?)
+- [ ] Make DZSimulator launch with a black window, not a white one
+
+- [ ] Test DispInfo parsing with new knowledge, see [here](https://github.com/ValveSoftware/source-sdk-2013/blob/master/sp/src/utils/vbsp/disp_vbsp.cpp#L325-L328) and [here](https://github.com/ValveSoftware/source-sdk-2013/blob/master/sp/src/public/builddisp.cpp#L762-L768)
+- [ ] Investigate undesirable displacement collisions while rampsliding: Are only badly sewn displacement edges to blame? Only visualize those edges? Or are triangle edge planes or collision epsilons in the displacement collision code to blame? Visualize that?
+    - reproducible rampslide fail, blacksite, 128tick, standing: `ent_fire !self runscriptcode "self.SetOrigin(Vector(-55,-6900,1200));self.SetVelocity(Vector(0,1700,0))"`
+- [ ] Add "Effective Steepness" visualization mode (that only takes horizontal impact from player to surface into account)
+- [ ] Add "Effective Rampslide POV" visualization mode (where all surfaces, incl. bevel planes(!), are pushed outwards by half the player's AABB. Maybe shift the world down by half player height to make it feel more natural)
+    - NOTE: Standable ground for the player is detected once any of the 4 AABB quadrant traces hits a shallow surface (TODO test this)! This fact might ruin this new vis mode if not accounted for!
+- [ ] Add crosshair (changeable size?)
+- [ ] Visualize push direction, power, type and activation of trigger_push
+- [ ] Visualize when space gives boost and when not (use same color as full exo boost trajectory color)
+    - confirm with vscript again!
+    - small arrows that float up
+    - left and right edge of the screen: Z velocity scale from 1000 (bottom end) to 0 (top end)
+    - highlighted range between 500 and 100
+- [ ] Visualize when air acceleration is increased during a jump (ask KZ people about this)
+- [ ] Visualize 1, sometimes 2 player trajectories: no exo boost and full exo boost
+    - Only draw downwards part of trajectory? No culling? Precompile into mesh that gets scaled?
+- [ ] Visualize player velocity, shown as colored bar, overlaying:
+    - e.g.: gray bar for vel from 0 to 500, yellow bar from 500 to 1000, etc., each bar starts filling up on their own, overlayed
+- [ ] Somehow indicate if player's speed is increasing or decreasing to show if airstrafing is helping or not
+    - green/red glow around hori speed indicator
+    - vertical separators for discrete sections
+- [ ] Improve glidability surface coloring algorithm
+- [ ] Refactor main.cpp into multiple smaller files! (Optimize header sizes too?)
+- [ ] Add hotkeys for frequent UI actions (e.g. toggling overlay mode, visualization mode, connecting to csgo, show displacement edges)
+- [ ] Automate Git submodule installation (With a script? With CMake? With [CPM](https://github.com/cpm-cmake/CPM.cmake)? With [FetchContent](https://cmake.org/cmake/help/latest/module/FetchContent.html)?)
+
+## KNOWN ISSUES, PRIORITIZED:
+
+- [ ] Joining the `GitHubChecker` thread can block for 10-20 seconds, it then prints: `[GitHubChecker] ERROR: GET /gists/78dc2c304cfc9d0db7c1c6e9e2859fab failed with error code: 2`
+    - Might be caused by GitHub API outage
+- [ ] CSGO prefers game files in VPK archives over packed files inside the map BSP ? DZSim currently prefers packed files...
+- [ ] Disgusting brush mesh Z fighting
+- [ ] Draw order of transparent stuff makes transparent stuff disappear when looking through another transparent type.
+    - Each transparent face needs to be ordered by depth before being drawn
+    - Wide lines disappear behind transparent surfaces, split the lines on them
+- [ ] dz_arctic has terrible FPS, why?
+- [ ] Investigate "DISP_VPHYSICS found bad displacement collision face" error that makes displacements non-solid, what are the exact criteria for that?
+    - Make DZSim visualize those "error displacements" in a special way?
+- [ ] Low priority: In "CSGO Infinity" map (1v1_galaxy.bsp), the floor is missing (This is a func_breakable not being parsed)
+- [ ] Low priority: In "bump_neon" map, the floor is missing (These are multiple func_reflective_glass not being parsed)
+- [ ] Low priority: Handle props with AABB collision correctly (get AABB from MDL? HullMins / Maxs?). On DZ maps, currently only present with curtains on vineyard
+
+## FEATURE IDEAS, PRIORITIZED PER CATEGORY:
+- **PRACTICE FUNCTIONALITIES**
+    - Does DZSim's visualisation take into account if player is crouching? Is that detectable through getpos / getpos_exact commands?
+    - Player trajectories:
+        - Draw them green when they end up in glidable surface
+        - Draw post-collision move direction
+    - Show predicted Bump Mine projectile trajectory (or just the position it would end up in)
+    - UI option to enable/disable overlay erratically to improve remembering hill geometry
+    - Show player's AABB of recent ticks leading up to a collision
+    - Save and visualize certain jump lineups/trajectories
+        - Draw rings/zones that the player must move through to perform a trick (e.g. like this https://youtu.be/X_-eoDyhIjM?t=183)
+    - Add visualization mode: Surface Inclination ?
+    - Parse and visualize entities/values not yet parsed from map file (sorted by priority):
+        - Horizontal sun angle for diffuse lighting (On Blacksite it should be ~ 135 degrees)
+        - The trigger that insta-kills on County
+        - Whatever disables fall dmg in the haystack on vineyard
+        - func_breakable / func_breakable_surf (breakable windows)
+        - func_occluder ??? (are they solid or are they always inside other solid brushes?)
+        - trigger_teleport / trigger_teleport_relative
+    - When connected to CSGO and CSGO changes map, show a popup: Warn the user if currently loaded map in dzsim is different from map in csgo. Add UI option to try automatically loading CSGO's map (ON by default)
+        - Console command `host_map` or `script printl(GetMapName())` might be useful
+    - Rewind time! Rewind failed jump by two seconds, continue flying from there again
+    - Show harsh displacement edge connections, the harsher and more likely it stops a slide, the more intensive the visualization
+    - Failed slide statistic: e.g., "for a slide you needed 24% more speed or a 10% steeper angle"
+    - Visualize surface collision direction that gives a slide at maximum outgoing speed
+    - Option to show popups about:
+        - Boost amount, e.g., "3x trigger_push boost of 40" or "Bump Mine boost: 10% up, 90% horizontal"
+        - Activation precision, e.g. "activating the Bump Mine had a chance of 60% from the maximum 80%. Precision of 75%."
+    - Visualize surfaces that the player is likely to impact on (by extrapolating player's trajectory)
+    - Visualize current 'turning radius' of player in the air: The tightest air-strafe routes to the left and right in which the player doesn't lose horizontal speed
+        - Maybe also project the shown route on the ground for better orientation
+    - Visualize how optimally the player is strafing (check out community servers, how do they do it?)
+        - Average the player's strafe efficiency over time and determine glidable surfaces with that? (or set efficiency with user setting)
+    - Add bots that walk around for practicing stomp and knife kills
+    - Implement the entire CSGO player movement as accurately as possible (without using leaked CSGO source code!)
+        - What implementation details of that are missing from source-sdk-2013 code?
+        - Simulate one/multiple slides and detect upcoming obstacles, visualize to avoid in advance
+        - Bunnyhop fail visualisation: show how many ticks too late/early the jump was?!
+    - Add ability to slow down time?
+    - Droppable bumpmines that can be picked up again? (Respecting CSGO's +use selection mechanic)
+- **VISUALS**
+    - Visualize "specific horizontal player speed" by drawing objects moving at that speed
+    - Visualize arming state of bump mine (charge up animation?)
+    - Get bumpmine orientation and show trigger area
+    - Add some texture to every surface
+    - Visualize water depth better with deeper surfaces turning darker/more blue
+        - Simple hack instead of costly shader: Draw more transparent water faces beneath the water surface in steps -> transparency effects dominate more the deeper a ground surface is!
+        - Distinctly visualize surfaces with a water depth at which players start swimming aka enter "water movement mode" -> Useful to find water-rampgliding spots!
+    - Separate walkable and not walkable surfaces with different colors
+    - Color objects depending on surface property/type
+    - Make playerclip brushes transparent to tell the player that Bump Mines go through them? Disable face culling for playerclips?
+    - Bump Mine position indicator (edge of screen indicator)
+    - Show important objects(bump mines, ladders) through walls with special graphical effect (hachured?)
+    - Option to switch dark/light mode: Dark/bright terrain and sky
+    - Interpolate more precisely at collisions: pos A before collision, pos B after collision, use velocity at A and B to get collision point X in between, with that, interpolate between A and X, then between X and B
+    - Add stretched 4:3 or 16:10 (?) setting (for 4:3, make FOV smaller) https://youtu.be/frsp7VIKTuY
+    - Add user option to change MSAA sample count
+    - Add SMAA or FXAA Postprocessing (fast MSAA alternative) (https://youtu.be/Z9bYzpwVINA)
+    - Split polygons into triangles with the same algorithm as CSGO:
+        - maybe it's this (edge length minimization): https://www.geeksforgeeks.org/minimum-cost-polygon-triangulation/
+        - https://en.wikipedia.org/wiki/Minimum-weight_triangulation
+    - Use Stratum2 font?
+    - Only draw outline lines of adjacent triangles that have the exact same orientation (??? I forgot the reasons for this)
+    - Add fog?
+    - Add shadows?
+    - Option for black bars at top+bottom / left+right
+- **UI**
+    - Option to try to automatically connect to CSGO when needed
+    - Option to show input visualization (wasd, jump key, crouch key)
+    - Option to rebind keys
+        - Options: walk mode toggle/hold, duck mode toggle/hold, reverse mouse on/off
+    - Fun game setting options: gravity, airaccel, bumpboost, ...
+    - Allow user to favorite maps to appear at the top of the map list
+- **CSGO INTEGRATION**
+    - Smooth / Interpolate / Optimize CSGO integration (does it lag with many placed BMs?, use VScript functions to compress data printed into console output?)
+    - Option to automatically let CSGO record POV demos when joining a match
+    - Replay demo files from game dir, see https://github.com/ValveSoftware/csgo-demoinfo and https://github.com/markus-wa/demoinfocs-golang
+    - Detect if CSGO process is running, react in UI when CSGO is required
+    - Fix random slide fails by setting ConVar "sv_standable_normal" to a high value once player is in the air and resetting it when failing a glide? Seems like this enables gliding where it shouldn't be possible though...
+- **CSGO PARSING**
+    - Parse "csgo/gameinfo.txt" and get SearchPaths, use those to retrieve csgo assets
+        - Make sure files get loaded correctly if SearchPath has Unicode chars!
+            - Seems like Unicode SearchPaths can be opened with char strings, but might need a uint8_t -> char conversion, or the opposite.
+- **DEBUG / PERFORMANCE FUNCTIONALITY**
+    - Somehow determine VRAM usage
+    - Show detailed RAM usage, also of each BspMap member?
+    - Option to disable interpolation
+- **MISCELLANEOUS / NICE TO HAVE**
+    - Add Discord Rich Presence
+    - Add CSGO Danger Zone Map cycle info / announcer
+    - Add ingame respawn announcer (like DZMonitor)?
+    - Determine player spawns with navmesh (found in game dir or extracted from bsp file) ?
+        - Or use the "trigger_survival_playarea" entity, it marks the playable area, right?
+
+
+## TESTING / REQUIREMENTS RESEARCH
+- Interview experienced and beginner bumpers. Figure out what they want and how they practice.
